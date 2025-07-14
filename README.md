@@ -132,6 +132,9 @@ To visualize the DWA planner’s evaluated trajectories or selected path:
 
     Choose MarkerArray.
 
+<p align="center">
+  <img src="2-min.gif" alt="Demo GIF" />
+</p>
 
 ---
 
