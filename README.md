@@ -85,7 +85,7 @@ Publishes essential topics like:
 
 ### ✅ Terminal 2 - Start DWA planner
 ```bash
-ros2 launch dwa_planner planner.launch.py
+
 ros2 run custom_dwa_planner_cpp dwa_planner --ros-args -p goal_x:=1.0 -p goal_y:=1.5
 ```
 
