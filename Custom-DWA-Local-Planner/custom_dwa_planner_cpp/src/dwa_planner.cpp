@@ -51,6 +51,7 @@ public:
         this->declare_parameter("goal_weight", 3.0);        // Stronger goal attraction
         this->declare_parameter("heading_weight", 1.5);     // Balanced heading importance
         this->declare_parameter("obstacle_weight", 3.0);    // Strong obstacle avoidance
+        this->declare_parameter("stopping_buffer", 0.1);    // Additional stopping buffer
 
         // Load parameters
         max_speed_ = this->get_parameter("max_speed").as_double();
@@ -69,6 +70,7 @@ public:
         goal_weight_ = this->get_parameter("goal_weight").as_double();
         heading_weight_ = this->get_parameter("heading_weight").as_double();
         obstacle_weight_ = this->get_parameter("obstacle_weight").as_double();
+        stopping_buffer_ = this->get_parameter("stopping_buffer").as_double();
 
         // Subscribers and Publishers
         odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
@@ -126,6 +128,7 @@ private:
     double goal_weight_{2.0};
     double heading_weight_{1.5};
     double obstacle_weight_{3.0};
+    double stopping_buffer_{0.1};
     int sim_samples_{15};
     int eval_samples_{80};
 
@@ -300,6 +303,25 @@ private:
             goal_marker.pose.position.x = goal_x_;
             goal_marker.pose.position.y = goal_y_;
             marker_array.markers.push_back(goal_marker);
+
+            // Add stopping buffer visualization
+            visualization_msgs::msg::Marker buffer_marker;
+            buffer_marker.header.frame_id = odom_data_->header.frame_id;
+            buffer_marker.header.stamp = now();
+            buffer_marker.ns = "stopping_buffer";
+            buffer_marker.id = 0;
+            buffer_marker.type = visualization_msgs::msg::Marker::SPHERE;
+            buffer_marker.action = visualization_msgs::msg::Marker::ADD;
+            buffer_marker.scale.x = (stopping_buffer_) * 2.0;
+            buffer_marker.scale.y = (stopping_buffer_) * 2.0;
+            buffer_marker.scale.z = 0.1;
+            buffer_marker.color.a = 0.3;
+            buffer_marker.color.r = 1.0;
+            buffer_marker.color.g = 1.0;
+            buffer_marker.color.b = 0.0;
+            buffer_marker.pose.position.x = goal_x_;
+            buffer_marker.pose.position.y = goal_y_;
+            marker_array.markers.push_back(buffer_marker);
         }
 
         // Visualize all trajectories
@@ -367,21 +389,38 @@ private:
         double dist_to_goal = hypot(goal_x_ - odom_data_->pose.pose.position.x,
                                   goal_y_ - odom_data_->pose.pose.position.y);
         
-        if (dist_to_goal < goal_tolerance_) {
+        // Define stopping zones
+        const double stopping_distance = stopping_buffer_;
+        const double slow_down_zone = goal_tolerance_;
+        
+        if (dist_to_goal < stopping_distance) {
+            // In the stopping zone - force stop
             if (!goal_reached_) {
                 goal_reached_ = true;
                 RCLCPP_INFO(this->get_logger(), "Goal reached! Stopping.");
-                
-                // Stop the robot smoothly
-                geometry_msgs::msg::Twist stop_cmd;
-                stop_cmd.linear.x = 0.0;
-                stop_cmd.angular.z = 0.0;
-                cmd_pub_->publish(stop_cmd);
-                current_speed_ = 0.0;
-                current_turn_rate_ = 0.0;
             }
-            return;  // Skip planning when goal is reached
-        } else {
+            
+            // Stop the robot completely
+            geometry_msgs::msg::Twist stop_cmd;
+            stop_cmd.linear.x = 0.0;
+            stop_cmd.angular.z = 0.0;
+            cmd_pub_->publish(stop_cmd);
+            current_speed_ = 0.0;
+            current_turn_rate_ = 0.0;
+            return;
+        } 
+        else if (dist_to_goal < slow_down_zone) {
+            // In the slow down zone - reduce speed significantly
+            double slow_down_factor = dist_to_goal / slow_down_zone;
+            geometry_msgs::msg::Twist cmd;
+            cmd.linear.x = std::min(current_speed_, max_speed_ * 0.2 * slow_down_factor);
+            cmd.angular.z = current_turn_rate_ * 0.3;  // Reduce turning more aggressively
+            cmd_pub_->publish(cmd);
+            current_speed_ = cmd.linear.x;
+            current_turn_rate_ = cmd.angular.z;
+            return;
+        } 
+        else {
             goal_reached_ = false;  // Reset if we moved away from goal
         }
 
