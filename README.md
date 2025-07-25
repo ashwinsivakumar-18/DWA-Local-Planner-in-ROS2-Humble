@@ -76,11 +76,11 @@ Spawns the robot with sensors and physics.
 
 Publishes essential topics like:
 
-    /odom – robot odometry
+  /odom – robot odometry
 
-    /scan – laser scan
+  /scan – laser scan
 
-    /tf – coordinate transforms
+  /tf – coordinate transforms
 
 
 ### ✅ Terminal 2 - Start DWA planner
@@ -91,46 +91,38 @@ ros2 run custom_dwa_planner_cpp dwa_planner --ros-args -p goal_x:=1.0 -p goal_y:
 
   
 
-    planner.launch.py sets up required parameters/nodes.
+  planner.launch.py sets up required parameters/nodes.
 
-    dwa_planner is the custom local planner:
+  dwa_planner is the custom local planner:
 
-        Subscribes to /odom, /scan
+  Subscribes to /odom, /scan
 
-        Publishes velocity commands to /cmd_vel
+  Publishes velocity commands to /cmd_vel
 
-        Computes safe and goal-directed motion in real-time
+  Computes safe and goal-directed motion in real-time
 
-        Parameters:
-
-            goal_x / goal_y – target position
+  Parameters:
+goal_x / goal_y – target position
 
 
 ### ✅ Terminal 3 - Launch RViz visualization
 ```bash
 ros2 launch turtlebot3_bringup rviz2.launch.py 
 ```
-      Launches RViz2 with the default TurtleBot3 config.
+  ## Launches RViz2 with the default TurtleBot3 config.
 
-    Visualizes:
-
-        Robot model and position
-
-        Laser scan data
-
-        TF tree
-
-        Planned path and goals
+  Visualizes:
+Robot model and position
+Laser scan data
+TF tree
+Planned path and goals
 
 🖼️ Add Markers in RViz2
 
 To visualize the DWA planner’s evaluated trajectories or selected path:
 
-    Open RViz2.
-
-    In the "Displays" panel, click Add.
-
-    Choose MarkerArray.
+   Open RViz2.
+  In the "Displays" panel, click Add.---> Choose MarkerArray.
 
 <p align="center">
   <img src="2-min.gif" alt="Demo GIF" />
